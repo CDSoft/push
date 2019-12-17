@@ -9,6 +9,7 @@ where
 
 import Control.Monad
 import qualified Data.ByteString.Char8 as B
+import Data.List.Extra
 import Network.FTP.Client
 import System.Directory
 import System.Exit
@@ -58,13 +59,8 @@ confFileNotFound = do
 isIgnored :: Conf -> FilePath -> Bool
 isIgnored conf name = (isHidden || isTmp || inBlackList) && not inWhiteList
     where
-        isHidden = case name of
-            '.':_ -> True
-            _ -> False
-        isTmp = case (name, takeExtension name) of
-            ('~':_, _) -> True
-            (_, ".swp") -> True
-            _ -> False
+        isHidden = "." `isPrefixOf` name
+        isTmp = "~" `isPrefixOf` name || ".swp" `isSuffixOf` name
         inBlackList = name `elem` ignore conf
         inWhiteList = name `elem` keep conf
 

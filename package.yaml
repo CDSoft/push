@@ -1,5 +1,5 @@
 name:                push
-version:             0.1.0.0
+version:             0.1.0.1
 github:              "CDSoft/push"
 license:             BSD3
 author:              "Christophe Delord"
@@ -26,14 +26,15 @@ library:
   ghc-options:
   - -Wall -Werror
   dependencies:
+  - bytestring
   - containers
   - data-default
   - directory
+  - extra
   - filepath
-  - time
-  - pretty-simple
   - ftp-client
-  - bytestring
+  - pretty-simple
+  - time
 
 executables:
   push:
