@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiWayIf #-}
+
 module Scan ( withFiles
             )
 where
@@ -20,8 +22,6 @@ withFiles conf handleDirectory handleFile = recurse "."
                     let fullName = makeRelative "." (path </> name)
                     isFile <- doesFileExist fullName
                     isDir <- doesDirectoryExist fullName
-                    case (isFile, isDir) of
-                        (True, _) -> handleFile fullName
-                        (_, True) -> handleDirectory fullName >> recurse fullName
-                        (False, False) -> error $ "Can not push " ++ fullName
-
+                    if | isFile -> handleFile fullName
+                       | isDir -> handleDirectory fullName >> recurse fullName
+                       | otherwise -> error $ "Can not push " ++ fullName

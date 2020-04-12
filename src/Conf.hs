@@ -76,4 +76,3 @@ check :: FTPResponse -> IO ()
 check FTPResponse { frStatus = Success } = return ()
 check FTPResponse { frMessage = SingleLine s } = error $ "FTP error: " ++ B.unpack s
 check FTPResponse { frMessage = MultiLine ss } = error $ "FTP error: \n" ++ unlines (map B.unpack ss)
-

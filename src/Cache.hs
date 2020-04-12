@@ -22,7 +22,8 @@ cacheFile = ".cache"
 data Item = Dir FilePath
           | File FilePath Integer UTCTime
           deriving (Show, Read, Eq)
-type Cache = MVar (M.Map FilePath Item)
+type CacheMap = M.Map FilePath Item
+type Cache = MVar CacheMap
 
 itemName :: Item -> FilePath
 itemName (Dir name) = name
@@ -46,16 +47,15 @@ lookupCache name cacheMVar =
     M.lookup name <$> readMVar cacheMVar
 
 writeCache :: Cache -> Item -> IO ()
-writeCache cacheMVar item = do
-    cache <- takeMVar cacheMVar
-    let cache' = M.insert (itemName item) item cache
-    writeFile cacheFile (show cache')
-    putMVar cacheMVar cache'
+writeCache cacheMVar item =
+    withCache cacheMVar $ M.insert (itemName item) item
 
 removeCache :: Cache -> String -> IO ()
-removeCache cacheMVar name = do
-    cache <- takeMVar cacheMVar
-    let cache' = M.delete name cache
-    writeFile cacheFile (show cache')
-    putMVar cacheMVar cache'
+removeCache cacheMVar name =
+    withCache cacheMVar $ M.delete name
 
+withCache :: Cache -> (CacheMap -> CacheMap) -> IO ()
+withCache cacheMVar action = do
+    cache <- action <$> takeMVar cacheMVar
+    writeFile cacheFile (show cache)
+    putMVar cacheMVar cache
