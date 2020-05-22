@@ -19,7 +19,11 @@ import Text.Pretty.Simple
 confFile :: FilePath
 confFile = ".push"
 
+data Proto = FTP Int | SFTP Int
+           deriving (Show, Read)
+
 data Conf = Conf { server :: String
+                 , proto :: Proto
                  , user :: String
                  , password :: String
                  , root :: FilePath
@@ -48,6 +52,7 @@ confFileNotFound = do
     putStrLn $ confFile ++ " not found"
     putStrLn $ "Please create a " ++ confFile ++ " at the root of the directory to push containing:"
     pPrint $ Conf { server = "remote FTP server"
+                  , proto = FTP 21
                   , user = "user"
                   , password = "password"
                   , root = "root directory on the remove server"
@@ -65,8 +70,11 @@ isIgnored conf name = (isHidden || isTmp || inBlackList) && not inWhiteList
         inWhiteList = name `elem` keep conf
 
 withFTP' :: Conf -> (Handle -> IO ()) -> IO ()
-withFTP' conf action =
-    withFTP (server conf) 21 $ \ftp welcome -> do
+withFTP' conf action = do
+    let session = case proto conf of
+            FTP port -> withFTP (server conf) port
+            SFTP port -> withFTPS (server conf) port
+    session $ \ftp welcome -> do
         print welcome
         check =<< login ftp (user conf) (password conf)
         check =<< cwd ftp (root conf)
