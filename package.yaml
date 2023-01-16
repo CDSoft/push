@@ -1,10 +1,10 @@
 name:                push
-version:             0.1.0.2
+version:             0.1.0.3
 github:              "CDSoft/push"
 license:             BSD3
 author:              "Christophe Delord"
 maintainer:          "cdelord.fr"
-copyright:           "2019-2021 Christophe Delord"
+copyright:           "2019-2023 Christophe Delord"
 
 extra-source-files:
 - README.md
