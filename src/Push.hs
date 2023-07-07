@@ -16,47 +16,47 @@ import Network.FTP.Client
 import System.Directory
 import System.IO (hPrint, stderr)
 
-pushDir :: Handle -> Cache -> FilePath -> IO ()
-pushDir ftp cache name = do
-    maybeItem <- lookupCache name cache
-    let newDir = Dir name
+pushDir :: Handle -> Cache -> String -> FilePath -> IO ()
+pushDir ftp cache server name = do
+    maybeItem <- lookupCache server name cache
+    let newDir = Dir server name
     when (maybeItem /= Just newDir) $ do
-        putStrLn $ "mkd " ++ name
+        putStrLn $ "["++server++"] mkd " ++ name
         catch (void $ mkd ftp name)
               (\(e :: FTPException) -> hPrint stderr e)
-        writeCache cache (Dir name)
+        writeCache cache newDir
 
-pushFile :: Handle -> Cache -> FilePath -> IO ()
-pushFile ftp cache name = do
-    maybeItem <- lookupCache name cache
+pushFile :: Handle -> Cache -> String -> FilePath -> IO ()
+pushFile ftp cache server name = do
+    maybeItem <- lookupCache server name cache
     newFile <- do
         newSize <- getFileSize name
         newDate <- getModificationTime name
-        return $ File name newSize newDate
+        return $ File server name newSize newDate
     when (maybeItem /= Just newFile) $ do
-        putStrLn $ "stor " ++ name
+        putStrLn $ "["++server++"] stor " ++ name
         content <- B.readFile name
         stor ftp name content TI
         writeCache cache newFile
 
-cleanItem :: Handle -> Cache -> Item -> IO ()
-cleanItem ftp cache item = do
-    let name = itemName item
+cleanItem :: Handle -> Cache -> String -> Item -> IO ()
+cleanItem ftp cache server item = do
+    let (server0, name) = itemName item
     isFile <- doesFileExist name
     isDir <- doesDirectoryExist name
     actualItem <- case (isFile, isDir) of
         (True, _) -> do
             actualSize <- getFileSize name
             actualDate <- getModificationTime name
-            return $ Just $ File name actualSize actualDate
-        (_, True) -> return $ Just $ Dir name
+            return $ Just $ File server0 name actualSize actualDate
+        (_, True) -> return $ Just $ Dir server name
         (False, False) -> return Nothing
     when (Just item /= actualItem) $ do
         case item of
             File{} -> when (isNothing actualItem) $ do
-                putStrLn $ "dele " ++ name
+                putStrLn $ "["++server++"] dele " ++ name
                 void $ dele ftp name
             Dir{} -> do
-                putStrLn $ "rmd " ++ name
+                putStrLn $ "["++server++"] rmd " ++ name
                 void $ rmd ftp name
-        removeCache cache name
+        removeCache cache server name

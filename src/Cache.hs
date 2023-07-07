@@ -19,15 +19,15 @@ import System.Directory
 cacheFile :: FilePath
 cacheFile = ".cache"
 
-data Item = Dir FilePath
-          | File FilePath Integer UTCTime
+data Item = Dir String FilePath
+          | File String FilePath Integer UTCTime
           deriving (Show, Read, Eq)
-type CacheMap = M.Map FilePath Item
+type CacheMap = M.Map (String, FilePath) Item
 type Cache = MVar CacheMap
 
-itemName :: Item -> FilePath
-itemName (Dir name) = name
-itemName (File name _ _) = name
+itemName :: Item -> (String, FilePath)
+itemName (Dir server name) = (server, name)
+itemName (File server name _ _) = (server, name)
 
 getCache :: IO Cache
 getCache = do
@@ -42,17 +42,17 @@ withFilesInCache cacheMVar handleItem = do
     let items = sortOn itemName (M.elems cache)
     forM_ (reverse items) handleItem
 
-lookupCache :: FilePath -> Cache -> IO (Maybe Item)
-lookupCache name cacheMVar =
-    M.lookup name <$> readMVar cacheMVar
+lookupCache :: String -> FilePath -> Cache -> IO (Maybe Item)
+lookupCache server name cacheMVar =
+    M.lookup (server, name) <$> readMVar cacheMVar
 
 writeCache :: Cache -> Item -> IO ()
 writeCache cacheMVar item =
     withCache cacheMVar $ M.insert (itemName item) item
 
-removeCache :: Cache -> String -> IO ()
-removeCache cacheMVar name =
-    withCache cacheMVar $ M.delete name
+removeCache :: Cache -> String -> FilePath -> IO ()
+removeCache cacheMVar server name =
+    withCache cacheMVar $ M.delete (server, name)
 
 withCache :: Cache -> (CacheMap -> CacheMap) -> IO ()
 withCache cacheMVar action = do

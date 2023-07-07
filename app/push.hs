@@ -10,6 +10,6 @@ main :: IO ()
 main = do
     conf <- getConf
     cache <- getCache
-    withFTP' conf $ \ftp -> do
-        withFilesInCache cache (cleanItem ftp cache)
-        withFiles conf (pushDir ftp cache) (pushFile ftp cache)
+    withFTP' conf $ \server ftp -> do
+        withFilesInCache cache (cleanItem ftp cache server)
+        withFiles conf (pushDir ftp cache server) (pushFile ftp cache server)

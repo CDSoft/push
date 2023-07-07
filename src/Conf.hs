@@ -19,18 +19,22 @@ import Text.Pretty.Simple
 confFile :: FilePath
 confFile = ".push"
 
-data Proto = FTP Int | SFTP Int
-           deriving (Show, Read)
-
-data Conf = Conf { server :: String
-                 , proto :: Proto
-                 , user :: String
-                 , password :: String
-                 , root :: FilePath
+data Conf = Conf { servers :: [ServerConf]
                  , ignore :: [FilePath]
                  , keep :: [FilePath]
                  }
             deriving (Show, Read)
+
+data ServerConf = ServerConf { server :: String
+                             , proto :: Proto
+                             , user :: String
+                             , password :: String
+                             , root :: FilePath
+                             }
+                  deriving (Show, Read)
+
+data Proto = FTP Int | SFTP Int
+           deriving (Show, Read)
 
 getConf :: IO Conf
 getConf = do
@@ -51,11 +55,13 @@ confFileNotFound :: IO a
 confFileNotFound = do
     putStrLn $ confFile ++ " not found"
     putStrLn $ "Please create a " ++ confFile ++ " at the root of the directory to push containing:"
-    pPrint $ Conf { server = "remote FTP server"
-                  , proto = FTP 21
-                  , user = "user"
-                  , password = "password"
-                  , root = "root directory on the remove server"
+    pPrint $ Conf { servers = [ ServerConf { server = "remote FTP server"
+                                           , proto = FTP 21
+                                           , user = "user"
+                                           , password = "password"
+                                           , root = "root directory on the remove server"
+                                           }
+                              ]
                   , ignore = ["list of files or directories to ignore"]
                   , keep = ["list of files or directories to keep"]
                   }
@@ -69,16 +75,17 @@ isIgnored conf name = (isHidden || isTmp || inBlackList) && not inWhiteList
         inBlackList = name `elem` ignore conf
         inWhiteList = name `elem` keep conf
 
-withFTP' :: Conf -> (Handle -> IO ()) -> IO ()
+withFTP' :: Conf -> (String -> Handle -> IO ()) -> IO ()
 withFTP' conf action = do
-    let session = case proto conf of
-            FTP port -> withFTP (server conf) port
-            SFTP port -> withFTPS (server conf) port
-    session $ \ftp welcome -> do
-        print welcome
-        check =<< login ftp (user conf) (password conf)
-        check =<< cwd ftp (root conf)
-        action ftp
+    forM_ (servers conf) $ \serverConf -> do
+        let session = case proto serverConf of
+                FTP port -> withFTP (server serverConf) port
+                SFTP port -> withFTPS (server serverConf) port
+        session $ \ftp welcome -> do
+            print welcome
+            check =<< login ftp (user serverConf) (password serverConf)
+            check =<< cwd ftp (root serverConf)
+            action (server serverConf) ftp
 
 check :: FTPResponse -> IO ()
 check FTPResponse { frStatus = Success } = return ()
